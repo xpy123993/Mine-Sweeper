@@ -13,20 +13,24 @@ area_width: the width of the mines area[width, width]
 mines_count: total mines in this area
 
 Functions:
+first_detect(pos): to avoid first position is a mine, the map will be generated after detect a position
 detect(pos): if there is a mine in that location, then return -1, else return total mines nearby
+
 
 
 '''
 
 
 class Landscape:
+    area_width = 0
+
     data = []
     mines_count = 0
 
     def __init__(self, area_width, mines_count):
         self.data = numpy.zeros([area_width, area_width])
         self.mines_count = mines_count
-
+        self.area_width = area_width
         coordinates = []
 
         for x in range(area_width):
@@ -37,6 +41,23 @@ class Landscape:
             pos = random.choice(coordinates)
             coordinates.remove(pos)
             self.data[pos] = 1
+
+    def first_detect(self, base_pos):
+        self.data = numpy.zeros([self.area_width, self.area_width])
+
+        coordinates = []
+
+        for x in range(self.area_width):
+            for y in range(self.area_width):
+                coordinates.append((x, y))
+        coordinates.remove(base_pos)
+        mines_count = self.mines_count
+        while mines_count > 0:
+            mines_count -= 1
+            pos = random.choice(coordinates)
+            coordinates.remove(pos)
+            self.data[pos] = 1
+        return self.detect(base_pos)
 
     def print(self):
         print(self.data)
