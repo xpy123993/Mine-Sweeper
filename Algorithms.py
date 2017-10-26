@@ -66,6 +66,12 @@ class Sweeper:
     uncovered_count = 0
 
     error_note = ErrorNote.ErrorNote()
+    error_note_enabled = False
+
+    error_total_count = 0
+    error_correct_count = 0  # just use for the evaluation of errornote
+
+    inference_message = ''
 
     def __init__(self):
         pass
@@ -78,6 +84,8 @@ class Sweeper:
         self.uncovered_location = numpy.zeros([self.problem_width, self.problem_width])
         self.remain_mines = self.problem.mines_count
         self.uncovered_count = 0
+        self.error_correct_count = 0
+        self.error_total_count = 0
 
     def get_valid_neighbours(self, pos):
         neighbours = []
@@ -148,6 +156,8 @@ class Sweeper:
                         data += str(self.explored_map[pos] - self.get_mines_nearby_number(pos))
                     else:
                         data += str(-2)
+                    if self.explored_map[pos] == -1 and self.problem.detect(pos) != -1:
+                        return "-1"  # abandoned because algorithm made wrong prediction before exploring a mine
                 else:
                     data += str(-3)
         return data
@@ -168,8 +178,8 @@ class Sweeper:
 
     def evaluate_risk(self, pos):
         # a basic risk is that we know there are certain mines in certain number cells
-
         risk = self.remain_mines / (self.problem_width * self.problem_width - self.uncovered_count)
+
         neighbours = self.get_valid_neighbours(pos)
         for neighbour in neighbours:
             if self.is_uncovered(neighbour):
@@ -189,10 +199,27 @@ class Sweeper:
                     risk = max(risk, unknown_mines / unknown_cells)
                     # it cannot be a mine if any of its neighbour knows all the mines nearby
                     if unknown_mines == 0:
+                        self.inference_message += '(%g, %g): unknown mines = 0 -> (%g, %g) is safe' % (
+                            neighbour[0], neighbour[1], pos[0], pos[1]
+                        ) + '\n'
                         return 0
                     # it must be a mine if any of its neighbour thinks it is a mine
                     if unknown_mines == unknown_cells:
+                        self.inference_message += '(%g, %g): unknown mines = unknown neighbours' \
+                                                  ' -> (%g, %g) is a mine' % (
+                                                      neighbour[0], neighbour[1], pos[0], pos[1]
+                                                  ) + '\n'
                         return 1
+
+        if self.error_note_enabled and self.get_covered_neighbours_number(pos) < 3:
+            recorded_risk = self.error_note.get_evaluate(self.make_error_key(pos))
+            if recorded_risk != 0:
+                risk = risk + recorded_risk
+                if recorded_risk > 0 and self.problem.detect(pos) == -1:
+                    self.error_correct_count += 1
+                elif recorded_risk < 0 and self.problem.detect(pos) != -1:
+                    self.error_correct_count += 1
+                self.error_total_count += 1
         return round(risk, 2)
 
     def mark_as_mine(self, mine_position):
@@ -208,6 +235,7 @@ class Sweeper:
             value = self.problem.detect(pos)
         if value == -1:  # if we detect a mine directly, game lost
             # print('LOSE')
+            self.uncovered_location[pos] = 1
             self.explored_map[pos[0], pos[1]] = -2
             return True
         self.explored_map[pos] = value
@@ -223,31 +251,38 @@ class Sweeper:
                     locations.append((x, y))
         return locations
 
+    def demonstrate_half_auto(self):
+        work_queue = self.get_covered_locations()
+        risk_queue = [self.evaluate_risk(pos) for pos in work_queue]
+        if self._remove_all_confirmed_position(work_queue, risk_queue):
+            return self.demonstrate_half_auto()
+        return work_queue, risk_queue
+
+    def _remove_all_confirmed_position(self, work_queue, risk_values):
+        remove_list = []
+        for i in range(len(risk_values)):
+            if risk_values[i] == 1:
+                mine_point = work_queue[i]
+                self.mark_as_mine(mine_point)
+                remove_list.append(mine_point)
+            elif risk_values[i] == 0:
+                self.explore(work_queue[i])
+                remove_list.append(work_queue[i])
+        for ptn in remove_list:
+            work_queue.remove(ptn)
+        return len(remove_list) > 0  # recalculate the risk list if we find confirmed some new locations
+
+
     def run(self):
         work_queue = self.get_covered_locations()
         # hit = 0
         count = 0
 
-        def remove_all_confirmed_position(risk_values):
-            remove_list = []
-            for i in range(len(risk_values)):
-                if risk_values[i] == 1:
-                    mine_point = work_queue[i]
-                    self.mark_as_mine(mine_point)
-                    remove_list.append(mine_point)
-                elif risk_values[i] == 0:
-                    self.explore(work_queue[i])
-                    remove_list.append(work_queue[i])
-            for ptn in remove_list:
-                work_queue.remove(ptn)
-            return len(remove_list) > 0  # recalculate the risk list if we find confirmed some new locations
-
         while len(work_queue) > 0:
-            # risks = [self.evaluate_risk(pos) for pos in work_queue]
-            risks = [self.evaluate_risk(pos) + .3 * self.error_note.get_evaluate(self.make_error_key(pos)) for pos in
-                     work_queue]
 
-            if remove_all_confirmed_position(risks):
+            risks = [self.evaluate_risk(pos) for pos in work_queue]
+
+            while self._remove_all_confirmed_position(work_queue, risks):
                 continue
 
             if len(work_queue) > 0:
@@ -264,12 +299,12 @@ class Sweeper:
                             hit += 1
                         count += 1
                         '''
-
-                        self.record_note(point, self.problem.data[point])
+                        if self.error_note_enabled:
+                            self.record_note(point, self.problem.detect(point))
 
                     break
                 work_queue.remove(min_risk_point)
-                random.shuffle(work_queue)
+                # random.shuffle(work_queue)
 
         correct_count = 0
         error_count = 0  # impossible
@@ -288,8 +323,9 @@ class Sweeper:
         print('Mines found:', correct_count, '/', self.problem.mines_count)
         print('Uncovered Cells:', self.uncovered_count, '/', (self.problem_width * self.problem_width))
         '''
-
+        '''
         if error_count > 0:
             print('!!!Error count:', error_count)
         if count == 0: count = -1
+        '''
         return self.uncovered_count == self.problem_width * self.problem_width

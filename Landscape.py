@@ -83,6 +83,13 @@ class Landscape:
                 count += 1
         return count
 
+    def get_all_game_map(self):
+        game_map = numpy.zeros(shape=[self.area_width, self.area_width])
+        for i in range(self.area_width):
+            for j in range(self.area_width):
+                game_map[i, j] = self.detect((i, j))
+        return game_map
+
     def detect(self, pos):
         if self.is_mine(pos) == 1:
             return -1

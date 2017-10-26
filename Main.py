@@ -1,6 +1,6 @@
 import Landscape
 import Algorithms
-
+import ui
 
 def test_function(sweeper):
     print('*' * 20)
@@ -29,23 +29,46 @@ def test_function(sweeper):
     print('*' * 20)
 
 
-def drive():
-    case_number = 100
+'''
+Game-Set
+
+Easy: 9*9 with 9 mines
+Medium: 16*16 with 40 mines
+Hard: 16*30 with 90 mines
+
+'''
+
+
+def batch_drive():
+    case_number = 1
     number_per_case = 1000
 
     sweeper = Algorithms.Sweeper()
+    sweeper.error_note_enabled = True  # enable auto self-correct mode
+
+    cache_total_count = 0
+    cache_correct_count = 0
 
     for i in range(case_number):
-        sum = 0
+        success_count = 0
+        cache_total_count = cache_correct_count = 0
         for case_i in range(number_per_case):
-            landscape = Landscape.Landscape(area_width=5, mines_count=5)
+            landscape = Landscape.Landscape(area_width=22, mines_count=99)
             sweeper.load(landscape)
             success = sweeper.run()
+            cache_total_count += sweeper.error_total_count
+            cache_correct_count += sweeper.error_correct_count
             if success:
-                sum += 1
+                success_count += 1
+        if cache_total_count == 0: cache_total_count = 1
+        print('Correct Rate = ', round(100.0 * success_count / number_per_case, 2), '%, ', 'Cache correct rate:',
+              round(100 * cache_correct_count / cache_total_count, 2), '%')
 
-        print('Correct Rate = ', round(100.0 * sum / number_per_case, 2), '%')
         # test_function(sweeper)
 
 
+def drive():
+    window = ui.Window(mines_count=20)
+    window.init_graph()
+    window.dialog()
 drive()

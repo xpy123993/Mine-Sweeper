@@ -22,61 +22,52 @@ Recorded 132 rules finally.
 
 class ErrorNote:
     memory = {}
-    forbidden = {}
-
     save_count = 0
 
     def __init__(self):
-        if os.path.exists('save1.txt'):
+        if os.path.exists('key.txt'):
             self.load()
 
     def add_note(self, data, result):
-        result = 1 if result > 0 else -1
-        if self.forbidden.get(data) is None:
-            if self.memory.get(data) is None:
-                self.memory[data] = result
-            elif self.memory[data] != result:
-                self.memory.pop(data)
-                self.forbidden[data] = 1
+        if result == -1:  # is a mine
+            risk = 1
+        else:
+            risk = -1
+        # the goal is to increase the risk when the result is -1, in other word, a mine
+        if self.memory.get(data) is None:
+            self.memory[data] = (risk, 1)
+        else:
+            self.memory[data] = (self.memory[data][0] + risk, self.memory[data][1] + 1)
         self.save_count += 1
-        if self.save_count > 1000:
+        if self.save_count > 10000:
             self.save_count = 0
             self.check_point()
 
     def check_point(self):
-        store_file = open('save1.txt', 'w')
-        for value in self.forbidden.keys():
-            store_file.write(value + '\n')
-        store_file.close()
-        store_file = open('save2.txt', 'w')
-        store_file2 = open('save3.txt', 'w')
-        for value in self.memory.keys():
-            if self.memory.get(value) == 1:
-                store_file.write(value + '\n')
-            else:
-                store_file2.write(value + '\n')
-        store_file.close()
-        store_file2.close()
+        key_file = open('key.txt', 'w')
+        data_file = open('data.txt', 'w')
+        for key in self.memory.keys():
+            key_file.write(key + '\n')
+            data_file.write(str(self.memory[key][0]) + '\n')
+            data_file.write(str(self.memory[key][1]) + '\n')
+        key_file.close()
+        data_file.close()
 
     def load(self):
-        self.forbidden.clear()
         self.memory.clear()
-        store_file = open('save1.txt', 'r')
-        values = store_file.readlines()
-        for value in values:
-            self.forbidden[value] = 1
-        store_file.close()
-        store_file = open('save2.txt', 'r')
-        values = store_file.readlines()
-        for value in values:
-            self.memory[value] = 1
-        store_file.close()
-        store_file = open('save3.txt', 'r')
-        for value in values:
-            self.memory[value] = -1
-        store_file.close()
+        key_file = open('key.txt', 'r')
+        data_file = open('data.txt', 'r')
+        lines = key_file.readlines()
+        for line in lines:
+            if len(line) == 0: continue
+            count, amount = int(data_file.readline()), int(data_file.readline())
+            self.memory[line[:len(line) - 1]] = (count, amount)
+        key_file.close()
+        data_file.close()
+        print('%g items loaded' % len(self.memory.keys()))
 
     def get_evaluate(self, data):
         if self.memory.get(data) is None:
             return 0
-        return self.memory.get(data)
+        pack = self.memory.get(data)
+        return pack[0] / pack[1]
