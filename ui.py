@@ -4,7 +4,21 @@ import tkinter.scrolledtext
 import Landscape
 import Algorithms
 
+'''
+UI FORM
+
+class Window
+
+def __init__(window_size, map_width, mines_count):
+window_size: the pixel size of this window
+map_width: the width of mines landscape
+mines_count: the number of mines the landscape has
+
+def dialog():   show this window as a dialog
+'''
+
 default_window_size = (950, 600)
+
 
 class Window:
     main_frame = tkinter.Tk()
@@ -18,8 +32,6 @@ class Window:
 
     sweeper = None
     landscape = None
-
-    work_mode = 'auto'
 
     map_width = 0
     mines_count = 0
@@ -35,14 +47,14 @@ class Window:
         self.frame_size = window_size
         self.main_frame.geometry(par)
 
-    def __init__(self, window_size=default_window_size, work_mode='half_auto', map_width=10, mines_count=10):
+    def __init__(self, window_size=default_window_size, map_width=10, mines_count=10):
         self.set_size(window_size)
         self.landscape = Landscape.Landscape(map_width, mines_count)
-        self.work_mode = work_mode
         self.sweeper = Algorithms.Sweeper()
         self.sweeper.load(self.landscape)
         self.map_width = map_width
         self.mines_count = mines_count
+        self.init_graph()
 
     def reset_game(self):
         self.landscape = Landscape.Landscape(self.map_width, self.mines_count)
@@ -92,6 +104,7 @@ class Window:
 
         mine_frame = tkinter.Frame(self.main_frame)
         mine_frame.grid(row=1, column=0, padx=10)
+        self.main_frame.title('MineSweeper')
 
         def button_click(i, j):
 
@@ -106,12 +119,19 @@ class Window:
                 self.sweeper.uncovered_location = numpy.ones(
                     shape=[self.landscape.area_width, self.landscape.area_width])
                 self.sweeper.uncovered_count = self.landscape.area_width * self.landscape.area_width
+                self.draw_mines_area()
+                for key in self.mines_button.keys():
+                    self.mines_button[key]['background'] = '#ffbbbb'
             elif self.sweeper.uncovered_count == self.landscape.area_width * self.landscape.area_width:
                 self.game_hint.set('GAME OVER, WIN')
+                self.draw_mines_area()
+                for key in self.mines_button.keys():
+                    self.mines_button[key]['background'] = '#bbffbb'
             else:
+                self.draw_mines_area()
                 self.game_hint.set(
-                    'Current Status: Playing, Remaining mines: %g' % (self.sweeper.remain_mines))
-            self.draw_mines_area()
+                    'Current Status: Playing, Remaining mines: %g' % self.sweeper.remain_mines)
+
             self.game_text.insert(tkinter.END, self.sweeper.inference_message)
             self.sweeper.inference_message = ''
             self.game_text.see(tkinter.END)
@@ -122,8 +142,9 @@ class Window:
             for k in range(len(self.available_moves)):
                 x, y = self.available_moves[k]
                 if x == i and y == j:
-                    risk_hint = 'Evaluated Risk: %g%% (%g%% from experience)' \
+                    risk_hint = 'Evaluated Risk: %g%% (%s%g%% by experience)' \
                                 % (round(100 * self.moves_probability[k], 2),
+                                   '+' if self.moves_e_probability[k] >= 0 else '',
                                    round(100 * self.moves_e_probability[k], 2))
                     self.risk_hint.set('%s, %s' % (position_hint, risk_hint))
 
@@ -145,11 +166,13 @@ class Window:
             label.grid(row=0, column=i + 1)
             label = tkinter.Label(mine_frame, text=str(i))
             label.grid(row=i + 1, column=0)
+        label = tkinter.Label(mine_frame, text='POS')
+        label.grid(row=0, column=0)
 
-        reset_button = tkinter.Button(self.main_frame, text='RESET', command=lambda: self.reset_game())
+        reset_button = tkinter.Button(self.main_frame, text='Restart', command=lambda: self.reset_game())
         reset_button.grid(row=2, column=0, padx=10, pady=10)
 
-        label_frame = tkinter.scrolledtext.ScrolledText(self.main_frame, width=60, height=36)
+        label_frame = tkinter.scrolledtext.ScrolledText(self.main_frame, width=60, height=38)
         label_frame.grid(row=1, column=1, padx=10)
         self.game_text = label_frame
 

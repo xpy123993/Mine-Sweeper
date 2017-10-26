@@ -73,4 +73,6 @@ class ErrorNote:
         if self.memory.get(data) is None:
             return 0
         pack = self.memory.get(data)
+        if pack[1] < 100:
+            return 0
         return 0.2 * pack[0] / pack[1]

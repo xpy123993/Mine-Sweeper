@@ -62,16 +62,13 @@ class Sweeper:
     explored_map = []
     uncovered_location = []
 
-    remain_mines = 0
-    uncovered_count = 0
+    remain_mines = uncovered_count = 0
 
     error_note = ErrorNote.ErrorNote()
-    error_note_enabled = False
+    error_note_enabled = True
+    learning_mode = False  # random sampling to learn more pattern by making mistake
 
     inference_message = ''
-
-    def __init__(self):
-        pass
 
     def load(self, problem):
         self.problem = problem
@@ -81,8 +78,6 @@ class Sweeper:
         self.uncovered_location = numpy.zeros([self.problem_width, self.problem_width])
         self.remain_mines = self.problem.mines_count
         self.uncovered_count = 0
-        self.error_correct_count = 0
-        self.error_total_count = 0
 
     def get_valid_neighbours(self, pos):
         neighbours = []
@@ -105,23 +100,19 @@ class Sweeper:
 
     def get_uncovered_neighbours_number(self, pos):
         count = 0
-        for dx in (-1, 0, 1):
-            _x = pos[0] + dx
-            for dy in (-1, 0, 1):
-                _y = pos[1] + dy
-                if _x in range(self.problem_width) and _y in range(self.problem_width) and (_x, _y) != pos:
-                    if self.is_uncovered((_x, _y)):
-                        count += 1
+        neighbours = self.get_valid_neighbours(pos)
+        for neighbour in neighbours:
+            count += 1 if self.is_uncovered(neighbour) else 0
         return count
 
     def get_covered_neighbours_number(self, pos):
         return self.get_valid_neighbours_number(pos) - self.get_uncovered_neighbours_number(pos)
 
-    def make_error_key(self, pos):
+    def _get_snapshot_key(self, pos):
         data = ''
-        for dx in (-1, 0, 1):
+        for dx in (-2, 0, 2):
             x = dx + pos[0]
-            for dy in (-1, 0, 1):
+            for dy in (-2, 0, 2):
                 y = dy + pos[1]
                 if x in range(self.problem_width) and y in range(self.problem_width):
                     n_pos = (x, y)
@@ -140,39 +131,28 @@ class Sweeper:
         return data
 
     def record_note(self, pos, result):
-        self.error_note.add_note(self.make_error_key(pos), result)
+        self.error_note.add_note(self._get_snapshot_key(pos), result)
 
     def get_mines_nearby_number(self, pos):
         count = 0
-        for dx in (-1, 0, 1):
-            _x = pos[0] + dx
-            for dy in (-1, 0, 1):
-                _y = pos[1] + dy
-                if _x in range(self.problem_width) and _y in range(self.problem_width) and (_x, _y) != pos:
-                    if self.explored_map[_x, _y] == -1:
-                        count += 1
+        neighbours = self.get_valid_neighbours(pos)
+        for neighbour in neighbours:
+            count += 1 if self.explored_map[neighbour] == -1 else 0
         return count
 
     def evaluate_risk(self, pos):
         # a basic risk is that we know there are certain mines in certain number cells
         risk = self.remain_mines / (self.problem_width * self.problem_width - self.uncovered_count)
-
+        if self.remain_mines == 0:
+            return 0  # if no unknown mines left, then no risk
         neighbours = self.get_valid_neighbours(pos)
         for neighbour in neighbours:
-            if self.is_uncovered(neighbour):
+            if self.is_uncovered(neighbour) and not self.explored_map[neighbour] == -1:
                 total_mines = self.explored_map[neighbour]
-                known_mines = self.get_mines_nearby_number(neighbour)
-                total_cells = self.get_valid_neighbours_number(neighbour)
-                known_cells = self.get_uncovered_neighbours_number(neighbour)
-
-                unknown_mines = total_mines - known_mines
-                unknown_cells = total_cells - known_cells
-
                 if total_mines != -1:  # this neighbour is not a mine
                     # the risk of a position is the max risk of his uncovered neighbours think on this position
-                    if unknown_cells == 0:
-                        print('!!!impossible!!! evaluate_risk')
-
+                    unknown_mines = total_mines - self.get_mines_nearby_number(neighbour)
+                    unknown_cells = self.get_covered_neighbours_number(neighbour)
                     risk = max(risk, unknown_mines / unknown_cells)
                     # it cannot be a mine if any of its neighbour knows all the mines nearby
                     if unknown_mines == 0:
@@ -187,31 +167,35 @@ class Sweeper:
                                                       neighbour[0], neighbour[1], pos[0], pos[1]
                                                   ) + '\n'
                         return 1
+        if self.learning_mode:
+            risk = .5
+        if self.error_note_enabled and self.get_covered_neighbours_number(pos) <= 3 \
+                and self.get_uncovered_neighbours_number(pos) >= 2:
+            recorded_risk = self.error_note.get_evaluate(self._get_snapshot_key(pos))
 
-        if self.error_note_enabled and self.get_covered_neighbours_number(pos) <= 3:
-            recorded_risk = self.error_note.get_evaluate(self.make_error_key(pos))
             return max(min(round(risk + recorded_risk, 2), 0.95), 0.05)
             # learning from experience can lead us to a wrong decision
         return round(risk, 2)
 
     def mark_as_mine(self, mine_position):
         self.remain_mines -= 1
-        self.explored_map[mine_position[0], mine_position[1]] = -1
+        self.explored_map[mine_position] = -1
         self.uncovered_location[mine_position] = 1
         self.uncovered_count += 1
 
     def explore(self, pos):
-        if self.uncovered_count == 0:
-            value = self.problem.first_detect(pos)
-        else:
-            value = self.problem.detect(pos)
+        value = self.problem.detect(pos) if self.uncovered_count > 0 else self.problem.first_detect(pos)
         if value == -1:  # if we detect a mine directly, game lost
-            # print('LOSE')
             self.explored_map[pos] = -2
             return True
         self.explored_map[pos] = value
         self.uncovered_location[pos] = 1
         self.uncovered_count += 1
+
+        if self.learning_mode and self.get_covered_neighbours_number(pos) < 3 \
+                and self.get_uncovered_neighbours_number(pos) >= 2:
+            self.record_note(pos, self.explored_map[pos])
+
         return False
 
     def get_covered_locations(self):
@@ -228,7 +212,7 @@ class Sweeper:
         if self._remove_all_confirmed_position(work_queue, risk_queue):
             return self.demonstrate_half_auto()
         e_risk_queue = [self.error_note.get_evaluate(
-            self.make_error_key(pos)) if self.get_covered_neighbours_number(pos) <= 3 else 0 for pos in work_queue]
+            self._get_snapshot_key(pos)) if self.get_covered_neighbours_number(pos) <= 3 else 0 for pos in work_queue]
         return work_queue, risk_queue, e_risk_queue
 
     def _remove_all_confirmed_position(self, work_queue, risk_values):
@@ -247,6 +231,7 @@ class Sweeper:
 
     def run(self):
         work_queue = self.get_covered_locations()
+        random.shuffle(work_queue)
         while len(work_queue) > 0:
             risks = [self.evaluate_risk(pos) for pos in work_queue]
             if self._remove_all_confirmed_position(work_queue, risks):
@@ -255,9 +240,10 @@ class Sweeper:
                 min_risk_point = work_queue[int(numpy.argmin(risks))]
                 if self.explore(min_risk_point):
                     for point, value in zip(work_queue, risks):
-                        if self.error_note_enabled and self.get_covered_neighbours_number(point) <= 3:
+                        if self.error_note_enabled and self.get_covered_neighbours_number(point) <= 3 \
+                                and self.get_uncovered_neighbours_number(point) >= 2:
                             self.record_note(point, self.problem.detect(point))
                     break  # game over
                 work_queue.remove(min_risk_point)
-                random.shuffle(work_queue)
+
         return self.uncovered_count == self.problem_width * self.problem_width
