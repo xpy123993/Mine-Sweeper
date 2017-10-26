@@ -101,15 +101,7 @@ class Sweeper:
         return 8
 
     def is_uncovered(self, pos):
-        return self.uncovered_location[pos[0], pos[1]] == 1
-
-    def get_uncovered_neighbours(self, pos):
-        neighbours = self.get_valid_neighbours(pos)
-        uncovered_neighbours = []
-        for neighbour in neighbours:
-            if self.is_uncovered(neighbour):
-                uncovered_neighbours.append(neighbour)
-        return uncovered_neighbours
+        return self.uncovered_location[pos] == 1
 
     def get_uncovered_neighbours_number(self, pos):
         count = 0
@@ -118,28 +110,12 @@ class Sweeper:
             for dy in (-1, 0, 1):
                 _y = pos[1] + dy
                 if _x in range(self.problem_width) and _y in range(self.problem_width) and (_x, _y) != pos:
-                    if self.uncovered_location[_x, _y] == 1:
+                    if self.is_uncovered((_x, _y)):
                         count += 1
         return count
 
-    def get_covered_neighbours(self, pos):
-        neighbours = self.get_valid_neighbours(pos)
-        covered_neighbours = []
-        for neighbour in neighbours:
-            if not self.is_uncovered(neighbour):
-                covered_neighbours.append(neighbour)
-        return covered_neighbours
-
     def get_covered_neighbours_number(self, pos):
         return self.get_valid_neighbours_number(pos) - self.get_uncovered_neighbours_number(pos)
-
-    def get_mines_nearby(self, pos):
-        neighbours = self.get_uncovered_neighbours(pos)
-        mines = []
-        for neighbour in neighbours:
-            if self.explored_map[neighbour] == -1:
-                mines.append(neighbour)
-        return mines
 
     def make_error_key(self, pos):
         data = ''
@@ -221,7 +197,7 @@ class Sweeper:
     def mark_as_mine(self, mine_position):
         self.remain_mines -= 1
         self.explored_map[mine_position[0], mine_position[1]] = -1
-        self.uncovered_location[mine_position[0], mine_position[1]] = 1
+        self.uncovered_location[mine_position] = 1
         self.uncovered_count += 1
 
     def explore(self, pos):
@@ -231,8 +207,7 @@ class Sweeper:
             value = self.problem.detect(pos)
         if value == -1:  # if we detect a mine directly, game lost
             # print('LOSE')
-            self.uncovered_location[pos] = 1
-            self.explored_map[pos[0], pos[1]] = -2
+            self.explored_map[pos] = -2
             return True
         self.explored_map[pos] = value
         self.uncovered_location[pos] = 1
@@ -243,7 +218,7 @@ class Sweeper:
         locations = []
         for x in range(self.problem_width):
             for y in range(self.problem_width):
-                if self.uncovered_location[x, y] == 0:
+                if not self.is_uncovered((x, y)):
                     locations.append((x, y))
         return locations
 
@@ -270,60 +245,19 @@ class Sweeper:
             work_queue.remove(ptn)
         return len(remove_list) > 0  # recalculate the risk list if we find confirmed some new locations
 
-
     def run(self):
         work_queue = self.get_covered_locations()
-        # hit = 0
-        count = 0
-
         while len(work_queue) > 0:
-
             risks = [self.evaluate_risk(pos) for pos in work_queue]
-
             if self._remove_all_confirmed_position(work_queue, risks):
                 continue
-
             if len(work_queue) > 0:
-                min_index = int(numpy.argmin(risks))
-                min_risk_point = work_queue[min_index]
-
+                min_risk_point = work_queue[int(numpy.argmin(risks))]
                 if self.explore(min_risk_point):
-
                     for point, value in zip(work_queue, risks):
-                        '''
-                        print('P', point, '=', value)
-                        
-                        if (self.error_note.get_evaluate(point) > 0) == (self.problem.data[point] == 0):
-                            hit += 1
-                        count += 1
-                        '''
                         if self.error_note_enabled and self.get_covered_neighbours_number(point) <= 3:
                             self.record_note(point, self.problem.detect(point))
-
-                    break
+                    break  # game over
                 work_queue.remove(min_risk_point)
-                # random.shuffle(work_queue)
-
-        correct_count = 0
-        error_count = 0  # impossible
-
-        for x in range(self.problem_width):
-            for y in range(self.problem_width):
-                if self.explored_map[x, y] == -1:
-                    if self.problem.data[x, y] == 1:
-                        correct_count += 1
-                    else:
-                        error_count += 1
-        '''
-        print(self.explored_map)
-        if self.uncovered_count != self.problem_width * self.problem_width:
-            print(self.problem.data)
-        print('Mines found:', correct_count, '/', self.problem.mines_count)
-        print('Uncovered Cells:', self.uncovered_count, '/', (self.problem_width * self.problem_width))
-        '''
-        '''
-        if error_count > 0:
-            print('!!!Error count:', error_count)
-        if count == 0: count = -1
-        '''
+                random.shuffle(work_queue)
         return self.uncovered_count == self.problem_width * self.problem_width

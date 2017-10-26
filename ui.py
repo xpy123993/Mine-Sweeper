@@ -117,12 +117,15 @@ class Window:
             self.game_text.see(tkinter.END)
 
         def button_hover(i, j):
+            position_hint = 'Current Position:(%g, %g)' % (i, j)
+            self.risk_hint.set('%s' % position_hint)
             for k in range(len(self.available_moves)):
                 x, y = self.available_moves[k]
                 if x == i and y == j:
-                    self.risk_hint.set(
-                        'Evaluated Risk: %g%% (%g%% from experience)' % (round(100 * self.moves_probability[k], 2),
-                                                                         round(100 * self.moves_e_probability[k], 2)))
+                    risk_hint = 'Evaluated Risk: %g%% (%g%% from experience)' \
+                                % (round(100 * self.moves_probability[k], 2),
+                                   round(100 * self.moves_e_probability[k], 2))
+                    self.risk_hint.set('%s, %s' % (position_hint, risk_hint))
 
         for i in range(self.landscape.area_width):
             for j in range(self.landscape.area_width):
@@ -131,12 +134,17 @@ class Window:
                                         state=tkinter.NORMAL,
                                         text=button_title, command=lambda i=i, j=j: button_click(i, j))
                 button.bind('<Enter>', lambda event, i=i, j=j: button_hover(i, j))
-                button.grid(row=i, column=j)
+                button.grid(row=i + 1, column=j + 1)
                 var = tkinter.StringVar()
                 self.mines_text[str(i) + '_' + str(j)] = var
                 button['textvariable'] = var
 
                 self.mines_button[str(i) + '_' + str(j)] = button
+        for i in range(self.landscape.area_width):
+            label = tkinter.Label(mine_frame, text=str(i))
+            label.grid(row=0, column=i + 1)
+            label = tkinter.Label(mine_frame, text=str(i))
+            label.grid(row=i + 1, column=0)
 
         reset_button = tkinter.Button(self.main_frame, text='RESET', command=lambda: self.reset_game())
         reset_button.grid(row=2, column=0, padx=10, pady=10)

@@ -3,33 +3,6 @@ import Algorithms
 import ui
 
 
-def test_function(sweeper):
-    print('*' * 20)
-    print('Begin function correctness test')
-    error_occurred = False
-    for x in range(5):
-        for y in range(5):
-            pos = (x, y)
-            if sweeper.get_valid_neighbours_number(pos) != len(sweeper.get_valid_neighbours(pos)):
-                print(x, y)
-                error_occurred = True
-            if sweeper.get_uncovered_neighbours_number(pos) != len(sweeper.get_uncovered_neighbours(pos)):
-                print(x, y)
-                error_occurred = True
-            if sweeper.get_covered_neighbours_number(pos) != len(sweeper.get_covered_neighbours(pos)):
-                print(x, y)
-                error_occurred = True
-            if sweeper.get_mines_nearby_number(pos) != len(sweeper.get_mines_nearby(pos)):
-                print(x, y)
-                error_occurred = True
-    if error_occurred:
-        print('ERROR FOUND!!!')
-    else:
-        print('Check pass')
-    print('Over')
-    print('*' * 20)
-
-
 '''
 Game-Set
 
@@ -64,10 +37,10 @@ def batch_drive():
 
 
 def drive():
-    window = ui.Window(mines_count=15)
+    window = ui.Window(mines_count=18)
     window.init_graph()
     window.sweeper.error_note_enabled = True
     window.dialog()
 
 
-drive()
+batch_drive()
