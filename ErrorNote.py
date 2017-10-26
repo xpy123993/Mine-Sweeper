@@ -38,8 +38,11 @@ class ErrorNote:
             self.memory[data] = (risk, 1)
         else:
             self.memory[data] = (self.memory[data][0] + risk, self.memory[data][1] + 1)
+            if self.memory[data][1] > 1000000:  # too big too store
+                self.memory[data][0] /= 2
+                self.memory[data][1] /= 2
         self.save_count += 1
-        if self.save_count > 10000:
+        if self.save_count > 1000:
             self.save_count = 0
             self.check_point()
 
@@ -70,4 +73,4 @@ class ErrorNote:
         if self.memory.get(data) is None:
             return 0
         pack = self.memory.get(data)
-        return pack[0] / pack[1]
+        return 0.2 * pack[0] / pack[1]

@@ -6,13 +6,13 @@ import Algorithms
 
 default_window_size = (950, 600)
 
-
 class Window:
     main_frame = tkinter.Tk()
     frame_size = default_window_size
     mines_text = dict()
     mines_button = dict()
 
+    risk_hint = None
     game_hint = None
     game_text = None
 
@@ -25,6 +25,10 @@ class Window:
     mines_count = 0
 
     uncovered_color = '#BBBBBB'
+
+    available_moves = []
+    moves_probability = []
+    moves_e_probability = []
 
     def set_size(self, window_size):
         par = str(window_size[0]) + 'x' + str(window_size[1])
@@ -81,6 +85,11 @@ class Window:
         self.game_hint = tkinter.StringVar()
         label['textvariable'] = self.game_hint
 
+        self.risk_hint = tkinter.StringVar()
+        slabel = tkinter.Label(self.main_frame)
+        slabel['textvariable'] = self.risk_hint
+        slabel.grid(row=0, column=1, padx=10, pady=10)
+
         mine_frame = tkinter.Frame(self.main_frame)
         mine_frame.grid(row=1, column=0, padx=10)
 
@@ -88,7 +97,8 @@ class Window:
 
             is_game_over = self.sweeper.explore((i, j))
             if not is_game_over:
-                self.sweeper.demonstrate_half_auto()
+                self.available_moves, self.moves_probability, self.moves_e_probability = \
+                    self.sweeper.demonstrate_half_auto()
 
             if is_game_over:
                 self.game_hint.set('GAME OVER, LOST')
@@ -106,13 +116,21 @@ class Window:
             self.sweeper.inference_message = ''
             self.game_text.see(tkinter.END)
 
+        def button_hover(i, j):
+            for k in range(len(self.available_moves)):
+                x, y = self.available_moves[k]
+                if x == i and y == j:
+                    self.risk_hint.set(
+                        'Evaluated Risk: %g%% (%g%% from experience)' % (round(100 * self.moves_probability[k], 2),
+                                                                         round(100 * self.moves_e_probability[k], 2)))
+
         for i in range(self.landscape.area_width):
             for j in range(self.landscape.area_width):
                 button_title = ' '
                 button = tkinter.Button(mine_frame, width=5, height=2,
                                         state=tkinter.NORMAL,
                                         text=button_title, command=lambda i=i, j=j: button_click(i, j))
-
+                button.bind('<Enter>', lambda event, i=i, j=j: button_hover(i, j))
                 button.grid(row=i, column=j)
                 var = tkinter.StringVar()
                 self.mines_text[str(i) + '_' + str(j)] = var

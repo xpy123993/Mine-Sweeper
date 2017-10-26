@@ -68,9 +68,6 @@ class Sweeper:
     error_note = ErrorNote.ErrorNote()
     error_note_enabled = False
 
-    error_total_count = 0
-    error_correct_count = 0  # just use for the evaluation of errornote
-
     inference_message = ''
 
     def __init__(self):
@@ -151,12 +148,16 @@ class Sweeper:
             for dy in (-1, 0, 1):
                 y = dy + pos[1]
                 if x in range(self.problem_width) and y in range(self.problem_width):
-                    pos = (x, y)
-                    if self.is_uncovered(pos):
-                        data += str(self.explored_map[pos] - self.get_mines_nearby_number(pos))
+                    n_pos = (x, y)
+                    if self.is_uncovered(n_pos):
+                        value = self.explored_map[n_pos]
+                        if value == -1:
+                            data += str(value)
+                        else:
+                            data += str(value - self.get_mines_nearby_number(n_pos))
                     else:
                         data += str(-2)
-                    if self.explored_map[pos] == -1 and self.problem.detect(pos) != -1:
+                    if self.explored_map[n_pos] == -1 and self.problem.detect(n_pos) != -1:
                         return "-1"  # abandoned because algorithm made wrong prediction before exploring a mine
                 else:
                     data += str(-3)
@@ -211,15 +212,10 @@ class Sweeper:
                                                   ) + '\n'
                         return 1
 
-        if self.error_note_enabled and self.get_covered_neighbours_number(pos) < 3:
+        if self.error_note_enabled and self.get_covered_neighbours_number(pos) <= 3:
             recorded_risk = self.error_note.get_evaluate(self.make_error_key(pos))
-            if recorded_risk != 0:
-                risk = risk + recorded_risk
-                if recorded_risk > 0 and self.problem.detect(pos) == -1:
-                    self.error_correct_count += 1
-                elif recorded_risk < 0 and self.problem.detect(pos) != -1:
-                    self.error_correct_count += 1
-                self.error_total_count += 1
+            return max(min(round(risk + recorded_risk, 2), 0.95), 0.05)
+            # learning from experience can lead us to a wrong decision
         return round(risk, 2)
 
     def mark_as_mine(self, mine_position):
@@ -256,7 +252,9 @@ class Sweeper:
         risk_queue = [self.evaluate_risk(pos) for pos in work_queue]
         if self._remove_all_confirmed_position(work_queue, risk_queue):
             return self.demonstrate_half_auto()
-        return work_queue, risk_queue
+        e_risk_queue = [self.error_note.get_evaluate(
+            self.make_error_key(pos)) if self.get_covered_neighbours_number(pos) <= 3 else 0 for pos in work_queue]
+        return work_queue, risk_queue, e_risk_queue
 
     def _remove_all_confirmed_position(self, work_queue, risk_values):
         remove_list = []
@@ -282,7 +280,7 @@ class Sweeper:
 
             risks = [self.evaluate_risk(pos) for pos in work_queue]
 
-            while self._remove_all_confirmed_position(work_queue, risks):
+            if self._remove_all_confirmed_position(work_queue, risks):
                 continue
 
             if len(work_queue) > 0:
@@ -299,7 +297,7 @@ class Sweeper:
                             hit += 1
                         count += 1
                         '''
-                        if self.error_note_enabled:
+                        if self.error_note_enabled and self.get_covered_neighbours_number(point) <= 3:
                             self.record_note(point, self.problem.detect(point))
 
                     break
