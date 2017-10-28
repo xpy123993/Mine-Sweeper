@@ -37,7 +37,7 @@ class Window:
     mines_count = 0
 
     uncovered_color = '#EEEEEE'
-    covered_color = '#FF0000'
+    covered_color = '#FFFFFF'
 
     instruction_hint = 'INSTRUCTIONS\nPlease press next.\nthe program explore the cells by itself.\n' \
                        'When the program can decide which cell to uncover next, \nit will explore automatic. \n' \
@@ -118,11 +118,13 @@ class Window:
         def button_click(i, j):
 
             is_game_over = self.sweeper.explore((i, j))
+
             if not is_game_over:
                 self.available_moves, self.moves_probability, self.moves_e_probability = \
                     self.sweeper.demonstrate_half_auto()
-
-            if is_game_over:
+            is_lose = self.sweeper.uncovered_count != self.landscape.area_width * self.landscape.area_width
+            is_success = is_lose = self.sweeper.uncovered_count == self.landscape.area_width * self.landscape.area_width
+            if is_game_over and is_lose:
                 self.game_hint.set('GAME OVER, LOST')
                 self.sweeper.explored_map = self.landscape.get_all_game_map()
                 self.sweeper.uncovered_location = numpy.ones(
@@ -131,7 +133,7 @@ class Window:
                 self.draw_mines_area()
                 for key in self.mines_button.keys():
                     self.mines_button[key]['background'] = '#ffbbbb'
-            elif self.sweeper.uncovered_count == self.landscape.area_width * self.landscape.area_width:
+            elif is_game_over and is_success:
                 self.game_hint.set('GAME OVER, WIN')
                 self.draw_mines_area()
                 for key in self.mines_button.keys():
@@ -140,6 +142,11 @@ class Window:
                 self.draw_mines_area()
                 self.game_hint.set(
                     'Current Status: Playing, Remaining mines: %g' % self.sweeper.remain_mines)
+
+            self.game_text.insert(tkinter.END, self.sweeper.inference_message)
+            self.sweeper.inference_message = ''
+            self.game_text.see(tkinter.END)
+
         def auto_explore():
 
             is_game_over = self.sweeper.stepbystep() != 1
@@ -194,6 +201,7 @@ class Window:
                 button.grid(row=i + 1, column=j + 1)
                 var = tkinter.StringVar()
                 self.mines_text[str(i) + '_' + str(j)] = var
+                var.set(' ')
                 button['textvariable'] = var
 
                 self.mines_button[str(i) + '_' + str(j)] = button

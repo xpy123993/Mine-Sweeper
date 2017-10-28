@@ -251,6 +251,4 @@ class Sweeper:
                 if self.explore(min_risk_point):
                     break  # game over
                 work_queue.remove(min_risk_point)
-        print(self.explored_map)
-        print(self.uncovered_location)
         return self.uncovered_count + self.remain_mines == self.problem_width * self.problem_width
