@@ -30,7 +30,7 @@ def MineSweeperOnce(area_width,minesnum,check):
         return flag,result,landscape
     return False,0,""
 
-def learning_patterns( number_per_case=1000):
+def learning_patterns(number_per_case=101):
     width = 9
     mines = 18
     check = False
@@ -38,7 +38,7 @@ def learning_patterns( number_per_case=1000):
         Dict = {}
         success_count = 0
         for case_i in range(number_per_case):
-            if case_i % 20 == 0:
+            if case_i % 2 == 0:
                 check = True
             flag,chainlen,mapdata = MineSweeperOnce(width,mines,check)
             if flag:
@@ -47,7 +47,7 @@ def learning_patterns( number_per_case=1000):
         Goal = sorted(Dict.items(),key = lambda x:x[0])
         #print(Goal)
         print("the longest length of chain:%s" % Goal[-1][0])
-        print("the minemap with the longest chain:\n", Goal[-1][1].data)
+#        print("the minemap with the longest chain:\n", Goal[-1][1].data)
         print('Width:%s,Mines:%s,Correct Rate = %g%%' % (width,mines,round(100.0 * success_count / number_per_case, 2)))
         print()
         mines -= 1
