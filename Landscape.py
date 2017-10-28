@@ -74,4 +74,19 @@ class Landscape:
         return game_map
 
     def detect(self, pos):
-        return -1 if self.is_mine(pos) else self.get_mines_count(pos)
+
+        if self.is_mine(pos): return -1
+        value = self.get_mines_count(pos)
+
+        prob = .3
+
+        def event_happen(p):
+            return p * 100 > random.randint(0, 100)
+
+        if event_happen(prob):
+            value += 1
+        if event_happen(prob / 2):
+            value += 1
+        if event_happen(prob / 4):
+            value += 1
+        return min(value, 8)
