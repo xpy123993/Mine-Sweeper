@@ -2,7 +2,7 @@ import Landscape
 import Algorithms
 import ui
 import random
-import sys
+#import sys
 
 '''
 Game-Set
@@ -37,7 +37,6 @@ def learning_patterns( number_per_case=1000):
     while mines > 0:
         Dict = {}
         success_count = 0
-        mines -= 1
         for case_i in range(number_per_case):
             if case_i % 20 == 0:
                 check = True
@@ -51,6 +50,7 @@ def learning_patterns( number_per_case=1000):
         print("the minemap with the longest chain:\n", Goal[-1][1].data)
         print('Width:%s,Mines:%s,Correct Rate = %g%%' % (width,mines,round(100.0 * success_count / number_per_case, 2)))
         print()
+        mines -= 1
 
 def drive():
     window = ui.Window(mines_count=18, map_width=10)
@@ -58,10 +58,11 @@ def drive():
 
 
 if __name__ == "__main__":
-    arg = sys.argv[1]
-    if "semiauto" == arg:
-        drive()
-    elif "auto" == arg:
-        learning_patterns()
-    else:
-        print("wrong argument!")
+     learning_patterns()
+#    arg = sys.argv[1]
+#    if "semiauto" == arg:
+#        drive()
+#    elif "auto" == arg:
+#        learning_patterns()
+#    else:
+#        print("wrong argument!")
