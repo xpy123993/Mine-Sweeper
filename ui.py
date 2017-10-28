@@ -37,9 +37,14 @@ class Window:
     mines_count = 0
 
     uncovered_color = '#EEEEEE'
-    covered_color = '#FFFFFF'
+    covered_color = '#FF0000'
 
-    instruction_hint = 'INSTRUCTIONS\nPlease press next.\n'
+    instruction_hint = 'INSTRUCTIONS\nPlease press next.\nthe program explore the cells by itself.\n' \
+                       'When the program can decide which cell to uncover next, \nit will explore automatic. \n' \
+                       'When the program cannot decide which cell to reveal next by given clues, \nit will suspend. ' \
+                       '\nThen the user needs to click the next button, \n' \
+                       'the program will use evaluate the risk to uncover a cell of the information is not enough, \n' \
+                       'the program will continue.\n'
 
     available_moves = []
     moves_probability = []
@@ -143,7 +148,13 @@ class Window:
                 self.available_moves, self.moves_probability, self.moves_e_probability = \
                     self.sweeper.demonstrate_half_auto()
 
-            if is_game_over:
+            if self.sweeper.uncovered_count == self.landscape.area_width * self.landscape.area_width:
+                self.game_hint.set('GAME OVER, WIN')
+                self.draw_mines_area()
+                for key in self.mines_button.keys():
+                    self.mines_button[key]['background'] = '#bbffbb'
+            elif is_game_over:
+
                 self.game_hint.set('GAME OVER, LOST')
                 self.sweeper.explored_map = self.landscape.get_all_game_map()
                 self.sweeper.uncovered_location = numpy.ones(
@@ -152,11 +163,6 @@ class Window:
                 self.draw_mines_area()
                 for key in self.mines_button.keys():
                     self.mines_button[key]['background'] = '#ffbbbb'
-            elif self.sweeper.uncovered_count == self.landscape.area_width * self.landscape.area_width:
-                self.game_hint.set('GAME OVER, WIN')
-                self.draw_mines_area()
-                for key in self.mines_button.keys():
-                    self.mines_button[key]['background'] = '#bbffbb'
             else:
                 self.draw_mines_area()
                 self.game_hint.set(
