@@ -215,6 +215,25 @@ class Sweeper:
             self._get_snapshot_key(pos)) if self.get_covered_neighbours_number(pos) <= 3 else 0 for pos in work_queue]
         return work_queue, risk_queue, e_risk_queue
 
+    def stepbystep(self):
+        work_queue = self.get_covered_locations()
+        random.shuffle(work_queue)
+        risk_queue = [self.evaluate_risk(pos) for pos in work_queue]
+        if len(risk_queue) == 0:
+            return 0	# win
+        min_index = 0
+        for i in range(len(risk_queue)):
+            if risk_queue[min_index] > risk_queue[i]:
+                min_index = i
+            if risk_queue[i] == 1:
+                self.mark_as_mine(work_queue[i])
+                return 1	# keep going
+        if self.explore(work_queue[min_index]):
+            return 2	# lose
+        return 1 # keep going
+                
+
+
     def _remove_all_confirmed_position(self, work_queue, risk_values):
         remove_list = []
         for i in range(len(risk_values)):

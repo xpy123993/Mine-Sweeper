@@ -17,7 +17,7 @@ mines_count: the number of mines the landscape has
 def dialog():   show this window as a dialog
 '''
 
-default_window_size = (950, 600)
+default_window_size = (950, 650)
 
 
 class Window:
@@ -36,7 +36,10 @@ class Window:
     map_width = 0
     mines_count = 0
 
-    uncovered_color = '#BBBBBB'
+    uncovered_color = '#EEEEEE'
+    covered_color = '#FFFFFF'
+
+    instruction_hint = 'INSTRUCTIONS\nPlease press next.\n'
 
     available_moves = []
     moves_probability = []
@@ -87,6 +90,7 @@ class Window:
                     bn_state = tkinter.NORMAL
                 self.mines_text[bn_key].set(bn_title)
                 self.mines_button[bn_key]['state'] = bn_state
+                self.mines_button[bn_key]['background'] = self.covered_color
                 if bn_state == tkinter.DISABLED:
                     self.mines_button[bn_key]['background'] = self.uncovered_color
 
@@ -131,6 +135,32 @@ class Window:
                 self.draw_mines_area()
                 self.game_hint.set(
                     'Current Status: Playing, Remaining mines: %g' % self.sweeper.remain_mines)
+        def auto_explore():
+
+            is_game_over = self.sweeper.stepbystep() != 1
+
+            if not is_game_over:
+                self.available_moves, self.moves_probability, self.moves_e_probability = \
+                    self.sweeper.demonstrate_half_auto()
+
+            if is_game_over:
+                self.game_hint.set('GAME OVER, LOST')
+                self.sweeper.explored_map = self.landscape.get_all_game_map()
+                self.sweeper.uncovered_location = numpy.ones(
+                    shape=[self.landscape.area_width, self.landscape.area_width])
+                self.sweeper.uncovered_count = self.landscape.area_width * self.landscape.area_width
+                self.draw_mines_area()
+                for key in self.mines_button.keys():
+                    self.mines_button[key]['background'] = '#ffbbbb'
+            elif self.sweeper.uncovered_count == self.landscape.area_width * self.landscape.area_width:
+                self.game_hint.set('GAME OVER, WIN')
+                self.draw_mines_area()
+                for key in self.mines_button.keys():
+                    self.mines_button[key]['background'] = '#bbffbb'
+            else:
+                self.draw_mines_area()
+                self.game_hint.set(
+                    'Current Status: Playing, Remaining mines: %g' % self.sweeper.remain_mines)
 
             self.game_text.insert(tkinter.END, self.sweeper.inference_message)
             self.sweeper.inference_message = ''
@@ -151,7 +181,7 @@ class Window:
         for i in range(self.landscape.area_width):
             for j in range(self.landscape.area_width):
                 button_title = ' '
-                button = tkinter.Button(mine_frame, width=5, height=2,
+                button = tkinter.Button(mine_frame, width=2, height=2,
                                         state=tkinter.NORMAL,
                                         text=button_title, command=lambda i=i, j=j: button_click(i, j))
                 button.bind('<Enter>', lambda event, i=i, j=j: button_hover(i, j))
@@ -172,9 +202,13 @@ class Window:
         reset_button = tkinter.Button(self.main_frame, text='Restart', command=lambda: self.reset_game())
         reset_button.grid(row=2, column=0, padx=10, pady=10)
 
+        next_button = tkinter.Button(self.main_frame, text='Next', command=lambda: auto_explore())
+        next_button.grid(row=2, column=1, padx=10, pady=10)
+
         label_frame = tkinter.scrolledtext.ScrolledText(self.main_frame, width=60, height=38)
         label_frame.grid(row=1, column=1, padx=10)
         self.game_text = label_frame
+        label_frame.insert(tkinter.END, self.instruction_hint)
 
     def dialog(self):
         self.main_frame.mainloop()

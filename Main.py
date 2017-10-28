@@ -33,9 +33,12 @@ def learning_patterns(case_number=1000, number_per_case=1000):
 
 
 def drive():
-    window = ui.Window(mines_count=18, map_width=10)
+    window = ui.Window(mines_count=10, map_width=9)
     window.dialog()
+
+        
 
 
 # learning_patterns()
 drive()
+
