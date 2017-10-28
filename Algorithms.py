@@ -142,9 +142,10 @@ class Sweeper:
 
     def evaluate_risk(self, pos):
         # a basic risk is that we know there are certain mines in certain number cells
-        risk = self.remain_mines / (self.problem_width * self.problem_width - self.uncovered_count)
+        # risk = self.remain_mines / (self.problem_width * self.problem_width - self.uncovered_count)
         if self.remain_mines == 0:
             return 0  # if no unknown mines left, then no risk
+        risk = 0.5
         neighbours = self.get_valid_neighbours(pos)
         for neighbour in neighbours:
             if self.is_uncovered(neighbour) and not self.explored_map[neighbour] == -1:
@@ -153,13 +154,16 @@ class Sweeper:
                     # the risk of a position is the max risk of his uncovered neighbours think on this position
                     unknown_mines = total_mines - self.get_mines_nearby_number(neighbour)
                     unknown_cells = self.get_covered_neighbours_number(neighbour)
-                    risk = max(risk, unknown_mines / unknown_cells)
+                    risk = (risk + unknown_mines / unknown_cells)
                     # it cannot be a mine if any of its neighbour knows all the mines nearby
+
+
                     if unknown_mines == 0:
                         self.inference_message += '(%g, %g): unknown mines = 0 -> (%g, %g) is safe' % (
                             neighbour[0], neighbour[1], pos[0], pos[1]
                         ) + '\n'
                         return 0
+                    '''
                     # it must be a mine if any of its neighbour thinks it is a mine
                     if unknown_mines == unknown_cells:
                         self.inference_message += '(%g, %g): unknown mines = unknown neighbours' \
@@ -167,14 +171,7 @@ class Sweeper:
                                                       neighbour[0], neighbour[1], pos[0], pos[1]
                                                   ) + '\n'
                         return 1
-        if self.learning_mode:
-            risk = .5
-        if self.error_note_enabled and self.get_covered_neighbours_number(pos) <= 3 \
-                and self.get_uncovered_neighbours_number(pos) >= 2:
-            recorded_risk = self.error_note.get_evaluate(self._get_snapshot_key(pos))
-
-            return max(min(round(risk + recorded_risk, 2), 0.95), 0.05)
-            # learning from experience can lead us to a wrong decision
+                    '''
         return round(risk, 2)
 
     def mark_as_mine(self, mine_position):
@@ -233,15 +230,11 @@ class Sweeper:
         return 1 # keep going
                 
 
-
     def _remove_all_confirmed_position(self, work_queue, risk_values):
         remove_list = []
+
         for i in range(len(risk_values)):
-            if risk_values[i] == 1:
-                mine_point = work_queue[i]
-                self.mark_as_mine(mine_point)
-                remove_list.append(mine_point)
-            elif risk_values[i] == 0:
+            if risk_values[i] == 0:
                 self.explore(work_queue[i])
                 remove_list.append(work_queue[i])
         for ptn in remove_list:
@@ -253,16 +246,11 @@ class Sweeper:
         random.shuffle(work_queue)
         while len(work_queue) > 0:
             risks = [self.evaluate_risk(pos) for pos in work_queue]
-            if self._remove_all_confirmed_position(work_queue, risks):
-                continue
             if len(work_queue) > 0:
                 min_risk_point = work_queue[int(numpy.argmin(risks))]
                 if self.explore(min_risk_point):
-                    for point, value in zip(work_queue, risks):
-                        if self.error_note_enabled and self.get_covered_neighbours_number(point) <= 3 \
-                                and self.get_uncovered_neighbours_number(point) >= 2:
-                            self.record_note(point, self.problem.detect(point))
                     break  # game over
                 work_queue.remove(min_risk_point)
-
-        return self.uncovered_count == self.problem_width * self.problem_width
+        print(self.explored_map)
+        print(self.uncovered_location)
+        return self.uncovered_count + self.remain_mines == self.problem_width * self.problem_width
