@@ -22,14 +22,11 @@ pop a window to demonstrate
 
 def MineSweeperOnce(area_width,minesnum,check):
     sweeper = Algorithms.Sweeper()
-    sweeper.learning_mode = True
+    sweeper.learning_mode = False
     landscape = Landscape.Landscape(area_width, minesnum)
     sweeper.load(landscape)
     flag,result = sweeper.run()
     if flag:
-        #if check:
-        #    print("the lenght of the chain:%s" % result)
-        #    print(landscape.data)	
         return flag,result,landscape
     return False,0,""
 
@@ -49,7 +46,8 @@ def learning_patterns( number_per_case=1000):
                 success_count += 1
                 Dict[chainlen] = mapdata
         Goal = sorted(Dict.items(),key = lambda x:x[0])
-        print("the length of chain:%s" % Goal[-1][0])
+        #print(Goal)
+        print("the longest length of chain:%s" % Goal[-1][0])
         print("the minemap with the longest chain:\n", Goal[-1][1].data)
         print('Width:%s,Mines:%s,Correct Rate = %g%%' % (width,mines,round(100.0 * success_count / number_per_case, 2)))
         print()

@@ -233,10 +233,14 @@ class Sweeper:
         work_queue = self.get_covered_locations()
         random.shuffle(work_queue)
         chain_length = 0
+        chain_list = []
         while len(work_queue) > 0:
             risks = [self.evaluate_risk(pos) for pos in work_queue]
             if self._remove_all_confirmed_position(work_queue, risks):
+                chain_length += 1
                 continue
+            chain_list.append(chain_length)
+            chain_length = 0
             if len(work_queue) > 0:
                 min_risk_point = work_queue[int(numpy.argmin(risks))]
                 if self.explore(min_risk_point):
@@ -246,6 +250,6 @@ class Sweeper:
                             self.record_note(point, self.problem.detect(point))
                     break  # game over
                 work_queue.remove(min_risk_point)
-            chain_length += 1 
+        chain_list.append(chain_length)
 
-        return self.uncovered_count == self.problem_width * self.problem_width,chain_length
+        return self.uncovered_count == self.problem_width * self.problem_width,max(chain_list)
