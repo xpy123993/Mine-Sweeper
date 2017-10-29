@@ -219,7 +219,9 @@ class Sweeper:
         work_queue = self.get_covered_locations()
         random.shuffle(work_queue)
         risk_queue = [self.evaluate_risk(pos) for pos in work_queue]
-        if len(risk_queue) == 0:
+        if len(risk_queue) == 0 or \
+                                self.uncovered_count + self.remain_mines == self.problem_width * self.problem_width or \
+                        self.remain_mines == 0:
             return 0	# win
         min_index = 0
         for i in range(len(risk_queue)):
@@ -250,7 +252,6 @@ class Sweeper:
 
     def run(self):
         work_queue = self.get_covered_locations()
-        random.shuffle(work_queue)
         while len(work_queue) > 0:
             risks = [self.evaluate_risk(pos) for pos in work_queue]
             if self._remove_all_confirmed_position(work_queue, risks):

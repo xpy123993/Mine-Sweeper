@@ -74,4 +74,6 @@ class Landscape:
         return game_map
 
     def detect(self, pos):
-        return -1 if self.is_mine(pos) else self.get_mines_count(pos)
+        if self.is_mine(pos): return -1
+        value = self.get_mines_count(pos)
+        return value
