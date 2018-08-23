@@ -13,8 +13,8 @@ In every case, we solve 1000 5*5 cells with 5 mines.
 
 Iteration counts                 |    1    |    2    |    3    |    4    |  ...  |   100   |
 ---------------------------------|---------|---------|---------|---------|  ...  |---------|
-Correct Rate(without error-note) |   40%   |   39%   |   41%   |   37%   |  ...  |   42%   |
-Correct Rate(with error-note)    |   35%   |   38%   |   36%   |   37%   |  ...  |   38%   |
+Correct Rate(with error-note)    |   40%   |   39%   |   41%   |   37%   |  ...  |   42%   |
+Correct Rate(without error-note) |   35%   |   38%   |   36%   |   37%   |  ...  |   38%   |
 
 Recorded 132 rules finally.
 '''
